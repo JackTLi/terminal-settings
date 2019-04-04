@@ -1,5 +1,5 @@
 # Terminal Settings
-My personal .vimrc and .zshrc files.
+My personal .vimrc and .zshrc files
 
 ## Ergodox
 https://configure.ergodox-ez.com/keyboard_layouts/dvndow/edit
