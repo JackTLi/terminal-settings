@@ -14,6 +14,7 @@ Plugin 'VundleVim/Vundle.vim'
 " Keep Plugin commands between vundle#begin/end.
 " plugin on GitHub repo
 Plugin 'tpope/vim-fugitive'
+Plugin 'tpope/vim-rhubarb'
 Plugin 'dracula/vim'
 Plugin 'altercation/vim-colors-solarized'
 Plugin 'drewtempelmeyer/palenight.vim'
@@ -38,6 +39,9 @@ Plugin 'vim-ruby/vim-ruby'
 
 Plugin 'ervandew/supertab'
 Plugin 'christoomey/vim-tmux-navigator'
+Plugin 'djoshea/vim-autoread'
+
+Plugin 'vim-syntastic/syntastic'
 " Install L9 and avoid a Naming conflict if you've already installed a
 " different version somewhere else.
 " Plugin 'ascenator/L9', {'name': 'newL9'}
@@ -94,7 +98,7 @@ set smartcase
 "let g:solarized_termtrans = 1
 
 set t_Co=256
-colorscheme solarized
+colorscheme nord
 "let g:nord_comment_brightness = 5
 set background=dark
 
@@ -111,15 +115,16 @@ set ttimeoutlen=50
 
 "let g:ctrlp_map = '<c-p>'
 "let g:ctrlp_cmd = 'CtrlP'
+"
 
 " fzf junk
-let g:fzf_files_options =
-  \ '--preview "(coderay {} || cat {}) 2> /dev/null | head -'.&lines.'"'
+"let g:fzf_files_options =
+"  \ '--preview "(coderay {} || cat {}) 2> /dev/null | head -'.&lines.'"'
 
 map <c-t> :Buffers<CR>
-map <c-p> :GFiles<CR>
-map <c-f> :Lines<CR>
-map <c-d> :bd<CR>
+map <c-p> :Files<CR>
+map <c-f> :Rg<CR>
+map <c-d> :Bclose<CR>
 map ˙ :bp<CR>
 map ¬ :bn<CR>
 map <c-n> :NERDTreeToggle %<CR>
@@ -138,6 +143,7 @@ nnoremap <c-c> :nohl<CR><c-c>
 nnoremap vv <C-w>v
 nnoremap vH <C-w>s
 command! CopyBuffer let @+ = expand('%:p')
+command! Rubocop !rubocop -a
 
 "let g:ctrlp_max_files=0
 "let g:ctrlp_max_depth=40
@@ -163,13 +169,41 @@ autocmd BufWritePre * %s/\s\+$//e
 set clipboard=unnamed
 
 " Swap files somewhere else pls
-"set backupdir=~/.vim/backup//
-"set directory=~/.vim/swap//
-"set undodir=~/.vim/undo//et directory^=$HOME/.vim/tmp//
+:set directory=$HOME/.vim/swapfiles//
 
-command! -bang -nargs=* Ag
-  \ call fzf#vim#ag(<q-args>,
-  \                 <bang>0 ? fzf#vim#with_preview('up:60%')
-  \                         : fzf#vim#with_preview('right:50%:hidden', '?'),
-  \                 <bang>0)
+command! -bang -nargs=* Ag call fzf#vim#grep("rg --column --line-number --no-heading --color=always --smart-case ".shellescape(<q-args>), 1, {'options': '--delimiter : --nth 4..'}, <bang>0)
+
+"
+function! GalaxyUrl(opts, ...) abort
+  if a:0 || type(a:opts) != type({})
+    return ''
+  endif
+
+  let remote = matchlist(a:opts.remote, '\v^https://git-mirror.shopifycloud.com(.{-1,})(\.git)?$')
+  if empty(remote)
+    return ''
+  end
+
+  let opts = copy(a:opts)
+  let opts.remote = "https://github.com/" . remote[1] . ".git"
+  return call("rhubarb#FugitiveUrl", [opts])
+endfunction
+
+if !exists('g:fugitive_browse_handlers')
+  let g:fugitive_browse_handlers = []
+endif
+
+if index(g:fugitive_browse_handlers, function('GalaxyUrl')) < 0
+  call insert(g:fugitive_browse_handlers, function('GalaxyUrl'))
+endif
+
+" Syntastic
+set statusline+=%#warningmsg#
+set statusline+=%{SyntasticStatuslineFlag()}
+set statusline+=%*
+
+let g:syntastic_auto_loc_list = 2
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
+let g:syntastic_stl_format = "[%E{Err: %fe #%e}%B{, }%W{Warn: %fw #%w}]"
 
